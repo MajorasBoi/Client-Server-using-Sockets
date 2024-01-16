@@ -1,50 +1,65 @@
 import random
 import string
 import socket
+import os
 
+# Read environment variables from .env file
+with open('.env') as f:
+   for line in f:
+       name, value = line.strip().split('=', 1)
+       os.environ[name] = value
 
-def generar_cadena():
-    # This section generates a string of random length
-    longitud = random.randint(50, 100)
-    cadena = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=longitud))
+# Function to generate a random string of characters, digits and spaces
+def generate_string():
+   # Generate a random length for the string
+   length = random.randint(50, 100)
+   # Generate the string using random choices from uppercase, lowercase and digits
+   strng = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=length))
 
-    # Add random spaces
-    espacios = random.randint(3, 5)
-    for _ in range(espacios):
-        posicion = random.randint(1, longitud-1) # Avoid spaces at the beginning and at the end
-        cadena = list(cadena)
-        cadena.insert(posicion, ' ')
-        cadena = ''.join(cadena)
+   # Add random spaces to the string
+   spaces = random.randint(3, 5)
+   for _ in range(spaces):
+       position = random.randint(1, length-1) # Avoid spaces at the beginning and at the end
+       strng = list(strng)
+       strng.insert(position, ' ')
+       strng = ''.join(strng)
 
-    return cadena
+   return strng
 
 # Ask the user for the number of strings to generate
-num_cadenas = input("Introduce the number for strings to generate: ")
-if num_cadenas == '':
-    num_cadenas = 1000000
+num_strings = input("Introduce the number for strings to generate: ")
+# If no input is provided, default to 1000000
+if num_strings == '':
+   num_strings = 1000000
 else:
-  num_cadenas = int(num_cadenas)
+ num_strings = int(num_strings)
 
-# Create the file and write the strings in it
-with open('chains.txt', 'w') as archivo:
- for _ in range(num_cadenas): # Generate the specified number of strings
-     cadena = generar_cadena()
-     archivo.write(cadena + '\n')
+# Open a file named 'chains.txt' in write mode and write the generated strings into it
+with open('chains.txt', 'w') as f:
+ for _ in range(num_strings):
+    strng = generate_string()
+    f.write(strng + '\n')
 
-# Connect to the server
+# Create a socket and connect it to the server running on localhost at port 8080
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(('localhost', 8080))
+sock.connect((os.getenv('HOSTNAME'), int(os.getenv('PORT'))))
 
+# List to store the analysis results
 analisis = []
 while True:
-    with open('chains.txt', 'r') as archivo:
-        for linea in archivo:
-            sock.send(linea.encode())
-            data = b''
-            data = sock.recv(1024) # receive data from the client
-            analisis.append(data.decode())
-    break
+   # Open the 'chains.txt' file in read mode
+   with open('chains.txt', 'r') as f:
+       for line in f:
+           # Send the string to the server
+           sock.send(line.encode())
+           # Receive data from the server
+           data = b''
+           data = sock.recv(1024)
+           analisis.append(data.decode())
+   break
+# Close the socket connection
 sock.close()
 
-with open('analisis.txt', 'w') as archivo:
-    archivo.write(''.join(analisis))
+# Open a file named 'analisis.txt' in write mode and write the analysis results into it
+with open('analisis.txt', 'w') as f:
+   f.write(''.join(analisis))
